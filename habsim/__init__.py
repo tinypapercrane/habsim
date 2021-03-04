@@ -27,5 +27,5 @@ ioutil
 """
 
 from . import util
-from .classes import *
+from .classes1 import * # changed
 from . import ioutil
