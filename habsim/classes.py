@@ -4,7 +4,7 @@ import math
 import random
 import bisect
 
-class Prediction:
+class Prediction: # goes away
     '''
     A single instance of a profile and its associated trajectory.
 
@@ -100,7 +100,7 @@ class Prediction:
 
         return self
 
-class LaunchSite:
+class LaunchSite: # goes away
     '''
     A LaunchSite keeps track of its coordinates and elevation.
     The elevation is ground elevation by default,
@@ -173,7 +173,7 @@ class Trajectory:
         return str(self.data)
 
 
-class ControlledProfile:
+class ControlledProfile: # goes away
 
     '''
     Series of altitude waypoints at regular intervals which define a controlled profile.
@@ -245,7 +245,7 @@ class ControlledProfile:
         return str(self.waypoints_data)
 
 
-class Profile:
+class Profile: # goes away
 
     '''
     A Profile object keeps track of a full flight profile for prediction.
@@ -340,7 +340,7 @@ class Profile:
             res += str(self[i]) + "\n"
         return res[:-1]
 
-class Segment:
+class Segment: # goes away
 
     '''
     A single part of a profile with a constant ascent/descent rate.
@@ -368,7 +368,7 @@ class Segment:
         else:
             return f'Rate:{self.rate}, Type:dur, Dur:{self.dur}, Coeff:{self.coeff} (Stopalt:{self.stopalt})'
 
-class StaticTarget():
+class StaticTarget(): # goes away
     '''
     A Target is used in trajectory optimization. A StaticTarget has a constant location at all times.
     '''
@@ -382,7 +382,7 @@ class StaticTarget():
         '''
         return self.lat, self.lon
 
-class MovingTarget():
+class MovingTarget(): # goes away
     '''
     A MovingTarget moves according to a list of times and waypoints, and intermediate locations are linearly interpolated.
     The location is not defined outside the bounds of the waypoints.
