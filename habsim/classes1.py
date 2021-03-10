@@ -34,30 +34,19 @@ class Trajectory(list):
         pass
 
 class Record:
-    def __init__(self, time, location, alt, vrate, airvector, windvector):
+    def __init__(self, time, location, alt, ascent_rate, air_vector, wind_vector):
         self.time = time
         self.location = location
         self.alt = alt
-        # naming
-        self.ascent_rate = vrate
-        self.air_vector = airvector
-        self.wind_vector = windvector
+        self.ascent_rate = ascent_rate
+        self.air_vector = air_vector
+        self.wind_vector = wind_vector
 
-class Location(tuple): # subclass of tuple, override __iter__
-    # unpack lat and lon as two arguments when passed into a function, *
+class Location(tuple):
     EARTH_RADIUS = 6371.0
 
-    # super class
-    # dont store instance variables
-    # define getter functions
     def __new__(self, lat, lon):
-        print("new")
         return tuple.__new__(Location, (lat, lon))
-
-    # def __init__(self, lat, lon):
-    #     print("constructor")
-    #     self.lat = lat
-    #     self.lon = lon
 
     def getLon(self):
         return self[1]
@@ -67,7 +56,7 @@ class Location(tuple): # subclass of tuple, override __iter__
 
     def distance(self, other):
         # change to indices
-        return self.haversine(self[0], self.lon, other.lat, other.lon)
+        return self.haversine(self[0], self.lon[1], other.lat[0], other.lon[1])
 
     def haversine(self, lat1, lon1, lat2, lon2):
         '''
