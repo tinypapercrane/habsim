@@ -29,3 +29,4 @@ ioutil
 from . import util
 from .classes1 import * # changed
 from . import ioutil
+from . import webplot
