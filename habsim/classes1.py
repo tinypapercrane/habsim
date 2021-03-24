@@ -1,5 +1,5 @@
 import datetime
-from . import util
+#from . import util
 import math
 import random
 import bisect
@@ -7,7 +7,7 @@ import numpy as np
 from windfile import WindFile
 from datetime import timedelta, datetime
 EARTH_RADIUS = float(6.371e6)
-
+import pdb
 
 class Trajectory(list):
     # superclass of list
@@ -38,16 +38,16 @@ class Trajectory(list):
         pass
 
 class Record:
-    def __init__(self, time, location, alt, vrate, airvector, windvector, groundelev):
+    def __init__(self, time=None, location=None, alt=None, ascent_rate=None, air_vector=None, wind_vector=None, ground_elev=None):
         self.time = time
         self.location = location
         self.alt = alt
         # naming
-        self.ascent_rate = vrate
-        self.air_vector = airvector
-        self.wind_vector = windvector
+        self.ascent_rate = ascent_rate
+        self.air_vector = air_vector
+        self.wind_vector = wind_vector
         #added 3/23
-        self.groundelev = groundelev
+        self.ground_elev = ground_elev
 
 class Location(tuple): # subclass of tuple, override __iter__
     # unpack lat and lon as two arguments when passed into a function, *
@@ -57,7 +57,7 @@ class Location(tuple): # subclass of tuple, override __iter__
     # dont store instance variables
     # define getter functions
     def __new__(self, lat, lon):
-        print("new")
+ #       print("new")
         return tuple.__new__(Location, (lat, lon))
 
     # def __init__(self, lat, lon):
@@ -96,61 +96,79 @@ class ElevationFile:
 
     def __init__(self, path): # store
         self.data = np.load(path, 'r')
+        self.resolution = 120
 
     def elev(self, lat, lon): # return elevation
-        x = int(round((lon + 180) * resolution))
-        y = int(round((90 - lat) * resolution)) - 1
-        return max(0, data[y, x])
+        x = int(round((lon + 180) * self.resolution))
+        y = int(round((90 - lat) * self.resolution)) - 1
+        return max(0, self.data[y, x])
 
 class Balloon:
-    def __init__(self, lat, lon, alt, time, ascent_rate=0, air_vector=(0,0), elev, groundelev):
-        self.lat = lat
-        self.lon = lon
-        self.alt = alt
-        self.time = time
-        self.ascent_rate = ascent_rate
-        self.air_vector = np.array(air_vector)
-        self.history = []
-        #added 3/23
-        self.elev = elev
-        self.groundelev = groundelev
-
-    def set_airvector(u, v):
-        self.air_vector = np.array([u, v])
+    def __init__(self, time=None, location=None, alt=0, ascent_rate=0, air_vector=(0,0), wind_vector=None, ground_elev=None):
+        record = Record(time=time, location=Location(*location), alt=alt, ascent_rate=ascent_rate, air_vector=np.array(air_vector) if air_vector is not None else None, wind_vector=np.array(wind_vector) if wind_vector is not None else None, ground_elev=ground_elev)
+        self.history = Trajectory([record])
+    #def set_airvector(u, v):
+       # self.air_vector = np.array([u, v])
 
     # bearing of the airvector
-    def set_bearing(self, bearing, airspeed: float):
-        self.ascent_rate = ascent_rate
+   # def set_bearing(self, bearing, airspeed: float):
+        #self.ascent_rate = ascent_rate
         # airspeed * sin(bearing), airspeed *cos(bearing) (make 0 degrees be the north pole)
 
-    def update(self, loc=None, elev=None, alt=None, time=None, ascent_rate=0, air_vector=(0,0), wind_vector, groundelev):
-        record = Record(time=time or self.time, loc=loc or (self.lat, self.lon), alt=alt or self.alt, ascent_rate=ascent_rate or self.ascent_rate, air_vector=air_vector or self.air_vector, wind_vector=wind_vector or self.wind_vector, groundelev=groundelev or self.groundelev)
+    def update(self, time=None, location=None, alt=0, ascent_rate=0, air_vector=(0,0), wind_vector=None, ground_elev=None):
+        record = Record(time=time or self.time, 
+                        location=Location(*location) or self.location, 
+                        alt=alt or self.alt, 
+                        ascent_rate=ascent_rate or self.ascent_rate, 
+                        air_vector=np.array(air_vector) if air_vector is not None else self.air_vector,
+                        wind_vector=np.array(wind_vector) if wind_vector is not None else self.wind_vector, 
+                        ground_elev=ground_elev or self.ground_elev)
+        self.history.append(record)
+    def __getattr__(self, name):
+        if name == "history":
+            return super().__getattr__(name)
+        return self.history[-1].__getattribute__(name)
 
-#testing
-#wf = WindFile("2021012806_01.npz")
-#print(wf.get(30, 120, 50, 1612143049))
+    def __setattr__(self, name, value):
+        if name != "history":
+            self.history[-1].__setattr__(name, value)
+        else:
+            super().__setattr__(name, value)
+
 class Simulator:
-    def __init__(self, wind_file):
+    def __init__(self, wind_file, elev_file):
+        self.elev_file = ElevationFile(elev_file)
         self.wind_file = wind_file
-        #edited 3/23
-    def step(self, balloon, step_size: float):
-        if not balloon.elev:
-            balloon.elev = self.elev.getElevation(balloon.loc)
-        if not balloon.windvector:
-            balloon.windvector = self.windfile.get(balloon.lat, balloon.lon, balloon.alt, balloon.time)
-        #windvector = self.wind_file.get(balloon.lat, balloon.lon, balloon.alt, balloon.time)
-        distance_moved = (windvector + balloon.air_vector) * step_size
-        balloon.alt = balloon.ascent_rate * step_size
-        balloon.time += timedelta(seconds=step_size)
-        dlat, dlon = self.lin_to_angular_velocities(balloon.lat, balloon.lon, *distance_moved) 
-        balloon.lat += dlat
-        balloon.lon += dlon
-        new_loc = balloon.lat, balloon.lon
-        balloon.history.append((balloon.lat, balloon.lon))
-        balloon.update(new_loc, elev=self.elev.getElevation(new_loc), wind_vector=self.windfile.get(new_loc), balloon.time, balloon.ascent_rate, balloon.airvector, balloon.windvector)
-        return balloon.lat, balloon.lon
-		
 
+
+    def step(self, balloon, step_size: float):
+        if not balloon.ground_elev:
+            balloon.ground_elev = self.elev_file.elev(*balloon.location)
+            balloon.alt = max(balloon.alt, balloon.ground_elev)
+       # pdb.set_trace()
+        if balloon.wind_vector is None:
+            temp = self.wind_file.get(*balloon.location, balloon.alt, balloon.time)
+         #   print(temp)
+            balloon.wind_vector = temp
+        #print("asdf")
+        #windvector = self.wind_file.get(balloon.lat, balloon.lon, balloon.alt, balloon.time)
+        #print(balloon.wind_vector, balloon.air_vector)
+        
+        distance_moved = (balloon.wind_vector + balloon.air_vector) * step_size
+        alt = balloon.alt + balloon.ascent_rate * step_size
+        time = balloon.time + timedelta(seconds=step_size)
+        dlat, dlon = self.lin_to_angular_velocities(*balloon.location, *distance_moved) 
+        newLat = balloon.location.getLat() + dlat
+        newLon = balloon.location.getLon() + dlon
+#        balloon.history.append((balloon.lat, balloon.lon))
+        newLoc = newLat, newLon
+        #print(balloon.time, time, step_size)
+        balloon.update(location=newLoc, 
+                ground_elev=self.elev_file.elev(*newLoc), 
+                wind_vector=self.wind_file.get(*newLoc, alt, time),
+                time=time, alt=alt)
+        return balloon.history[-1]
+		
     def lin_to_angular_velocities(self, lat, lon, u, v): 
         dlat = math.degrees(v / EARTH_RADIUS)
         dlon = math.degrees(u / (EARTH_RADIUS * math.cos(math.radians(lat))))
@@ -161,21 +179,21 @@ class Simulator:
             raise Exception("step size cannot be negative")
         if (target_alt and dur) or not (target_alt or dur):
             raise Exception("Trajectory simulation must either have a max altitude or specified duration, not both")
-        step_history = [(balloon.lat, balloon.lon)]
+        step_history =Trajectory([balloon.history[-1]])
         if not dur:
             dur = ((target_alt - balloon.alt) / balloon.ascent_rate) / 3600
         end_time = balloon.time + timedelta(hours=dur)
         while balloon.time < end_time:
             if balloon.time + timedelta(seconds=step_size) >= end_time:
                 step_size = (end_time - balloon.time).seconds
-            newLocation = step(balloon, step_size)
-            total_airtime += step_size
-            step_history.append(newLoaction)
+            newRecord = self.step(balloon, step_size)
+            #total_airtime += step_size
+            step_history.append(newRecord)
         return step_history
 
 #testing output code below this point
-balloon = Balloon(0, 30, 40, datetime.utcfromtimestamp(1612143049))
-simulate = Simulator(wf)
-for i in range(1000):
-    simulate.step(balloon, 1)
-print(balloon.history)
+#balloon = Balloon(0, 30, 40, datetime.utcfromtimestamp(1612143049))
+#simulate = Simulator(wf)
+#for i in range(1000):
+#    simulate.step(balloon, 1)
+#print(balloon.history)

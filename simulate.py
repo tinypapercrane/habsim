@@ -6,6 +6,7 @@ import math
 import bisect
 import time
 from windfile import WindFile
+from habsim import *
 
 # Note: .replace(tzinfo=utc) is needed because we need to call .timestamp
 
@@ -14,7 +15,7 @@ DATA_STEP = 6 # hrs
 
 ### Cache of datacubes and files. ###
 ### Filecache is in the form (timestamp, modelnumber). ###
-filecache = {}
+filecache = []
 
 currgefs = "Unavailable"
 
@@ -37,7 +38,8 @@ def reset():
     global filecache
     filecache = []
     for i in range(1, 21):
-        filecache.append(WindFile(f'{gefspath}{currgefs}_{str(i).zfill(2)}.npz'))
+        filecache.append(Simulator(WindFile(f'{gefspath}{currgefs}_{str(i).zfill(2)}.npz'), '/gefs/worldelev.npy'))
+        
 
 def lin_to_angular_velocities(lat, lon, u, v): 
     dlat = math.degrees(v / EARTH_RADIUS)
@@ -45,18 +47,28 @@ def lin_to_angular_velocities(lat, lon, u, v):
     return dlat, dlon
 
 def simulate(simtime, lat, lon, rate, step, max_duration, alt, model, coefficient=1, elevation=True):
-    end = simtime + timedelta(hours=max_duration)
+    balloon = Balloon(location=(lat, lon), alt=alt, time=simtime, ascent_rate=rate)
+    traj = filecache[model-1].simulate(balloon, step, dur=max_duration)
     path = list()
-
-    while True:
-        u, v = filecache[model-1].get(lat, lon, alt, simtime)
-        path.append((simtime.timestamp(), lat, lon, alt, u, v, 0, 0))
-        if simtime >= end or (elevation and elev.getElevation(lat, lon) > alt):
-            break
-        dlat, dlon = lin_to_angular_velocities(lat, lon, u, v)
-        alt = alt + step * rate
-        lat = lat + dlat * step * coefficient
-        lon = lon + dlon * step * coefficient
-        simtime = simtime + timedelta(seconds = step)
-    
+    for i in traj:
+        path.append((i.time, i.location.getLat(), i.location.getLon(), i.alt, i.wind_vector[0], i.wind_vector[1], 0, 0))
     return path
+
+
+            
+#def simulate(simtime, lat, lon, rate, step, max_duration, alt, model, coefficient=1, elevation=True):
+#    end = simtime + timedelta(hours=max_duration)
+#    path = list()
+#
+#    while True:
+#        u, v = filecache[model-1].get(lat, lon, alt, simtime)
+#        path.append((simtime.timestamp(), lat, lon, alt, u, v, 0, 0))
+#        if simtime >= end or (elevation and elev.getElevation(lat, lon) > alt):
+#            break
+#        dlat, dlon = lin_to_angular_velocities(lat, lon, u, v)
+#        alt = alt + step * rate
+#        lat = lat + dlat * step * coefficient
+#        lon = lon + dlon * step * coefficient
+#        simtime = simtime + timedelta(seconds = step)
+#    
+#    return path
