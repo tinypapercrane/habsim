@@ -50,20 +50,12 @@ class Record:
         self.ground_elev = ground_elev
 
 class Location(tuple): # subclass of tuple, override __iter__
-    # unpack lat and lon as two arguments when passed into a function, *
+    # unpack lat and lon as two arguments when passed into a function
     EARTH_RADIUS = 6371.0
 
     # super class
-    # dont store instance variables
-    # define getter functions
     def __new__(self, lat, lon):
- #       print("new")
         return tuple.__new__(Location, (lat, lon))
-
-    # def __init__(self, lat, lon):
-    #     print("constructor")
-    #     self.lat = lat
-    #     self.lon = lon
 
     def getLon(self):
         return self[1]
@@ -107,6 +99,7 @@ class Balloon:
     def __init__(self, time=None, location=None, alt=0, ascent_rate=0, air_vector=(0,0), wind_vector=None, ground_elev=None):
         record = Record(time=time, location=Location(*location), alt=alt, ascent_rate=ascent_rate, air_vector=np.array(air_vector) if air_vector is not None else None, wind_vector=np.array(wind_vector) if wind_vector is not None else None, ground_elev=ground_elev)
         self.history = Trajectory([record])
+    
     #def set_airvector(u, v):
        # self.air_vector = np.array([u, v])
 
@@ -124,6 +117,7 @@ class Balloon:
                         wind_vector=np.array(wind_vector) if wind_vector is not None else self.wind_vector, 
                         ground_elev=ground_elev or self.ground_elev)
         self.history.append(record)
+    
     def __getattr__(self, name):
         if name == "history":
             return super().__getattr__(name)
@@ -140,29 +134,25 @@ class Simulator:
         self.elev_file = ElevationFile(elev_file)
         self.wind_file = wind_file
 
-
-    def step(self, balloon, step_size: float):
+    def step(self, balloon, step_size: float, coefficient):
         if not balloon.ground_elev:
             balloon.ground_elev = self.elev_file.elev(*balloon.location)
             balloon.alt = max(balloon.alt, balloon.ground_elev)
-       # pdb.set_trace()
+        
         if balloon.wind_vector is None:
             temp = self.wind_file.get(*balloon.location, balloon.alt, balloon.time)
-         #   print(temp)
             balloon.wind_vector = temp
-        #print("asdf")
-        #windvector = self.wind_file.get(balloon.lat, balloon.lon, balloon.alt, balloon.time)
-        #print(balloon.wind_vector, balloon.air_vector)
         
         distance_moved = (balloon.wind_vector + balloon.air_vector) * step_size
         alt = balloon.alt + balloon.ascent_rate * step_size
         time = balloon.time + timedelta(seconds=step_size)
         dlat, dlon = self.lin_to_angular_velocities(*balloon.location, *distance_moved) 
-        newLat = balloon.location.getLat() + dlat
-        newLon = balloon.location.getLon() + dlon
-#        balloon.history.append((balloon.lat, balloon.lon))
+
+        # multiply by coeff to do FLOAT type balloon
+        newLat = balloon.location.getLat() + dlat * coefficient
+        newLon = balloon.location.getLon() + dlon * coefficient
         newLoc = newLat, newLon
-        #print(balloon.time, time, step_size)
+        
         balloon.update(location=newLoc, 
                 ground_elev=self.elev_file.elev(*newLoc), 
                 wind_vector=self.wind_file.get(*newLoc, alt, time),
@@ -174,7 +164,7 @@ class Simulator:
         dlon = math.degrees(u / (EARTH_RADIUS * math.cos(math.radians(lat))))
         return dlat, dlon
 
-    def simulate(self, balloon, step_size, target_alt=None, dur=None): 
+    def simulate(self, balloon, step_size, coefficient, elevation, target_alt=None, dur=None): 
         if step_size < 0:
             raise Exception("step size cannot be negative")
         if (target_alt and dur) or not (target_alt or dur):
@@ -186,9 +176,15 @@ class Simulator:
         while balloon.time < end_time:
             if balloon.time + timedelta(seconds=step_size) >= end_time:
                 step_size = (end_time - balloon.time).seconds
-            newRecord = self.step(balloon, step_size)
+            newRecord = self.step(balloon, step_size, coefficient)
+
             #total_airtime += step_size
             step_history.append(newRecord)
+
+            # break if balloon hits the ground (last record will be below ground)
+            if elevation and balloon.alt < self.elev_file.elev(*balloon.location):
+                break
+
         return step_history
 
 #testing output code below this point

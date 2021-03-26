@@ -33,7 +33,7 @@ def refresh():
         return True
     return False
 
-# opens and stores 20 windfiles in filecache
+# opens and stores 20 Simulators in filecache
 def reset():
     global filecache
     filecache = []
@@ -48,7 +48,7 @@ def lin_to_angular_velocities(lat, lon, u, v):
 
 def simulate(simtime, lat, lon, rate, step, max_duration, alt, model, coefficient=1, elevation=True):
     balloon = Balloon(location=(lat, lon), alt=alt, time=simtime, ascent_rate=rate)
-    traj = filecache[model-1].simulate(balloon, step, dur=max_duration)
+    traj = filecache[model-1].simulate(balloon, step, coefficient, elevation, dur=max_duration)
     path = list()
     for i in traj:
         path.append((i.time, i.location.getLat(), i.location.getLon(), i.alt, i.wind_vector[0], i.wind_vector[1], 0, 0))
