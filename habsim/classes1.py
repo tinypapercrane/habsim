@@ -147,7 +147,7 @@ class Simulator:
         alt = balloon.alt + balloon.ascent_rate * step_size
         time = balloon.time + timedelta(seconds=step_size)
         dlat, dlon = self.lin_to_angular_velocities(*balloon.location, *distance_moved) 
-
+        
         # multiply by coeff to do FLOAT type balloon
         newLat = balloon.location.getLat() + dlat * coefficient
         newLon = balloon.location.getLon() + dlon * coefficient
@@ -167,24 +167,30 @@ class Simulator:
     def simulate(self, balloon, step_size, coefficient, elevation, target_alt=None, dur=None): 
         if step_size < 0:
             raise Exception("step size cannot be negative")
-        if (target_alt and dur) or not (target_alt or dur):
+        
+        if (target_alt and dur != None) or not (target_alt or dur != None):
             raise Exception("Trajectory simulation must either have a max altitude or specified duration, not both")
         step_history =Trajectory([balloon.history[-1]])
-        if not dur:
+        
+        if dur == None:
             dur = ((target_alt - balloon.alt) / balloon.ascent_rate) / 3600
+        
+        if dur == 0:
+            step_history.append(self.step(balloon, 0, coefficient))
         end_time = balloon.time + timedelta(hours=dur)
-        while balloon.time < end_time:
+        
+        while (end_time - balloon.time).seconds > 1:
             if balloon.time + timedelta(seconds=step_size) >= end_time:
                 step_size = (end_time - balloon.time).seconds
             newRecord = self.step(balloon, step_size, coefficient)
 
             #total_airtime += step_size
             step_history.append(newRecord)
-
+            
             # break if balloon hits the ground (last record will be below ground)
             if elevation and balloon.alt < self.elev_file.elev(*balloon.location):
                 break
-
+        
         return step_history
 
 #testing output code below this point
