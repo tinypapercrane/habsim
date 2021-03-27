@@ -84,7 +84,6 @@ def singlezpb(timestamp, lat, lon, alt, equil, eqtime, asc, desc, model):
         rise = simulate.simulate(timestamp, lat, lon, asc, 240, dur, alt, model, elevation=False)
         if len(rise) > 0:
             timestamp, lat, lon, alt, __, __, __, __= rise[-1]
-            print(timestamp)
             #timestamp = datetime.utcfromtimestamp(timestamp).replace(tzinfo=timezone.utc)
         coast = simulate.simulate(timestamp, lat, lon, 0, 240, eqtime, alt, model)
         if len(coast) > 0:
