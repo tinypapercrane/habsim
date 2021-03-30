@@ -178,8 +178,7 @@ class Simulator:
         if dur == 0:
             step_history.append(self.step(balloon, 0, coefficient))
         end_time = balloon.time + timedelta(hours=dur)
-        
-        while (end_time - balloon.time).seconds > 1:
+        while (end_time - balloon.time).total_seconds() > 1:
             if balloon.time + timedelta(seconds=step_size) >= end_time:
                 step_size = (end_time - balloon.time).seconds
             newRecord = self.step(balloon, step_size, coefficient)
@@ -190,7 +189,6 @@ class Simulator:
             # break if balloon hits the ground (last record will be below ground)
             if elevation and balloon.alt < self.elev_file.elev(*balloon.location):
                 break
-        
         return step_history
 
 #testing output code below this point
