@@ -193,11 +193,17 @@ async function simulate() {
             await fetch(url2).then(res => res.json()).then(function(resjson){
                 if(resjson==="error"){
                     if(onlyonce) {
-                        alert("ERROR: Please make sure your entire flight is within 378 hours of the present model run.");
+                        alert("ERROR: Please make sure your entire flight is within 378 hours of the present model run.asdf");
                         onlyonce = false;
                     }
                     //break;
                  }
+                else if (resjson==="alt error") {
+                    if(onlyonce) {
+                        alert("ERROR: Please make sure your entire flight altitude is within 45km.");
+                        onlyonce = false;
+                    }
+                }
                 else {
                     showpath(resjson);
                 }

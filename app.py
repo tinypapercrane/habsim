@@ -92,7 +92,9 @@ def singlezpb(timestamp, lat, lon, alt, equil, eqtime, asc, desc, model):
         dur = (alt) / desc / 3600
         fall = simulate.simulate(timestamp, lat, lon, -desc, 240, dur, alt, model)
         return (rise, coast, fall)
-    except:
+    except Exception as e:
+        if str(e) == "alt out of range":
+            return "alt error"
         return "error"
 
 
