@@ -193,7 +193,7 @@ async function simulate() {
             await fetch(url2).then(res => res.json()).then(function(resjson){
                 if(resjson==="error"){
                     if(onlyonce) {
-                        alert("ERROR: Please make sure your entire flight is within 378 hours of the present model run.asdf");
+                        alert("ERROR: Please make sure your entire flight is within 378 hours of the present model run.");
                         onlyonce = false;
                     }
                     //break;
