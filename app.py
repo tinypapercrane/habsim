@@ -186,3 +186,5 @@ def wind():
     time = datetime(yr, mo, day, hr, mn).replace(tzinfo=timezone.utc)
     u, v, du, dv = simulate.get_wind(time,lat,lon,alt, model, levels)
     return jsonify([u, v, du, dv])
+
+# richard was here
