@@ -51,6 +51,8 @@ def simulate(simtime, lat, lon, rate, step, max_duration, alt, model, coefficien
     traj = filecache[model-1].simulate(balloon, step, coefficient, elevation, dur=max_duration)
     path = list()
     for i in traj:
+        if i.wind_vector is None:
+            raise Exception("alt out of range")
         path.append(((i.time - datetime(1970, 1, 1).replace(tzinfo=timezone.utc)).total_seconds(), i.location.getLat(), i.location.getLon(), i.alt, i.wind_vector[0], i.wind_vector[1], 0, 0))
     return path
 

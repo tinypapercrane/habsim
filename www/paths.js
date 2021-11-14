@@ -198,6 +198,12 @@ async function simulate() {
                     }
                     //break;
                  }
+                else if (resjson==="alt error") {
+                    if(onlyonce) {
+                        alert("ERROR: Please make sure your entire flight altitude is within 45km.");
+                        onlyonce = false;
+                    }
+                }
                 else {
                     showpath(resjson);
                 }
